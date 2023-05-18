@@ -3,7 +3,7 @@
 CFLAGS=-O3 -Wall
 LDFLAGS=-O3 -lm
 
-all: tspcc
+all: tspcc 
 
 tspcc: sequential/tspcc.o
 	c++ -o tspcc $(LDFLAGS) sequential/tspcc.o
@@ -16,3 +16,6 @@ omp:
 
 clean:
 	rm -f sequential/*.o sequential/tspcc
+
+test_stack:
+	c++ -o concurrent/containers/test_stack concurrent/containers/test_stack.cpp -latomic -lpthread

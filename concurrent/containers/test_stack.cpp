@@ -9,7 +9,7 @@ ConcurrentStack<int> stack;
 
 void push_thread()
 {
-    for (int i = 0; i < 1000; ++i)
+    for (int i = 0; i < 100000; ++i)
     {
         stack.push(i);
     }
@@ -17,7 +17,7 @@ void push_thread()
 
 void pop_thread()
 {
-    for (int i = 0; i < 1000; ++i)
+    for (int i = 0; i < 100000; ++i)
     {
         stack.pop();
     }
@@ -25,9 +25,7 @@ void pop_thread()
 
 int main()
 {
-    std::cout << "Hello, world!\n";
-
-
+    std::cout << "Hello tester!\n";
 
     // Create two threads to push elements onto the stack
     thread t1(push_thread);
@@ -43,7 +41,6 @@ int main()
     t3.join();
     t4.join();
 
-
     // Check if the stack is empty
     if (stack.empty())
     {
@@ -54,7 +51,7 @@ int main()
         cout << "Test failed" << endl;
     }
 
-    std::cout << "Goodbye, world!\n";
+    std::cout << "Goodbye, tester!\n";
 
     return 0;
 }
