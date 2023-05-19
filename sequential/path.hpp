@@ -70,6 +70,11 @@ public:
 		return false;
 	}
 
+	int at(int i) const 
+	{
+		 return _nodes[i]; 
+	}
+
 	void copy(Path* o)
 	{
 		if (max() != o->max()) {

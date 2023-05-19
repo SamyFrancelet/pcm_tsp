@@ -19,3 +19,11 @@ clean:
 
 test_stack:
 	c++ -o concurrent/containers/test_stack concurrent/containers/test_stack.cpp -latomic -lpthread
+
+concu: tsp
+
+tsp: concurrent/tsp.o
+	c++ -o tsp $(LDFLAGS) concurrent/tsp.o -latomic -lpthread
+
+tsp.o: concurrent/containers/tsp.cpp concurrent/containers/containers.hpp sequential/graph.hpp sequential/path.hpp sequential/tspfile.hpp
+	c++ $(CFLAGS) -c sequential/tsp.cpp -latomic -lpthread

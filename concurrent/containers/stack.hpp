@@ -1,3 +1,6 @@
+#ifndef CONCURRENT_STACK_HPP
+#define CONCURRENT_STACK_HPP
+
 #include <memory>
 #include "atomic.hpp"
 
@@ -63,3 +66,5 @@ public:
         return current_top == nullptr;
     }
 };
+
+#endif
