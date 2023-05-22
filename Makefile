@@ -25,5 +25,5 @@ concu: tsp
 tsp: concurrent/tsp.o
 	c++ -o tsp $(LDFLAGS) concurrent/tsp.o -latomic -lpthread
 
-tsp.o: concurrent/containers/tsp.cpp concurrent/containers/containers.hpp sequential/graph.hpp sequential/path.hpp sequential/tspfile.hpp
+tsp.o: concurrent/tsp.cpp concurrent/containers/containers.hpp sequential/graph.hpp sequential/path.hpp sequential/tspfile.hpp
 	c++ $(CFLAGS) -c sequential/tsp.cpp -latomic -lpthread

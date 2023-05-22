@@ -5,6 +5,7 @@
 //
 
 #include <iostream>
+#include "graph.hpp"
 
 #ifndef _path_hpp
 #define _path_hpp

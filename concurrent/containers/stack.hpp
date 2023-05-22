@@ -65,6 +65,19 @@ public:
         Node* current_top = top.get(stamp);
         return current_top == nullptr;
     }
+
+    int size()
+    {
+        uint64_t stamp = 0;
+        Node* current_top = top.get(stamp);
+        int size = 0;
+        while (current_top != nullptr)
+        {
+            size++;
+            current_top = current_top->next;
+        }
+        return size;
+    }
 };
 
 #endif
