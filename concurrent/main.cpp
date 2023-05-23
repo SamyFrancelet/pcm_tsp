@@ -20,8 +20,8 @@ struct Compare {
     }
 };
 
-//std::stack<Path> paths;
-std::priority_queue<Path, std::vector<Path>, Compare> paths;
+std::stack<Path> paths;
+//std::priority_queue<Path, std::vector<Path>, Compare> paths;
 
 void thinking(Path *best, Matrix *pMatrix, bool *keepWaiting, int tid, int *threadStatus)
 {
@@ -62,7 +62,10 @@ void thinking(Path *best, Matrix *pMatrix, bool *keepWaiting, int tid, int *thre
             Path leftChildPath(pMatrix, bnb.left());
             Path rightChildPath(pMatrix, bnb.right());
 
+            std::cout << "Best path cost: " << best->cost() << std::endl;
+
             double leftLowerBound = leftChildPath.lower_bound();
+            std::cout << "Left child lower bound: " << leftLowerBound << std::endl;
             tsp.lock();
             if (leftLowerBound <= best->cost()) {
                 // If the left path lower bound is less than the best path cost,
@@ -72,6 +75,7 @@ void thinking(Path *best, Matrix *pMatrix, bool *keepWaiting, int tid, int *thre
             tsp.unlock();
 
             double rightLowerBound = rightChildPath.lower_bound();
+            std::cout << "Right child lower bound: " << rightLowerBound << std::endl;
             tsp.lock();
             if (rightLowerBound <= best->cost()) {
                 // If the right path lower bound is less than the best path cost,
@@ -84,7 +88,6 @@ void thinking(Path *best, Matrix *pMatrix, bool *keepWaiting, int tid, int *thre
 }
 
 void start_tsp(Matrix *pMatrix) {
-    //std::chrono::time_point<std::chrono::system_clock> begin, end;
     std::chrono::steady_clock::time_point begin, end;
 
     int order = pMatrix->order();
@@ -92,6 +95,8 @@ void start_tsp(Matrix *pMatrix) {
 
     Path best(pMatrix, edges);
     paths.push(best);
+    std::cout << "Initial best path: " << std::endl;
+    best.display();
 
     unsigned int nCores = std::thread::hardware_concurrency();
     unsigned int nThreads;
@@ -138,6 +143,7 @@ int main(int argc, char* argv[]) {
     std::string tspFile(argv[1]);
     Matrix *matrix = TSPFile::matrix(tspFile);
 
+    std::cout << "Matrix order: " << matrix->order() << std::endl;
     matrix->display();
     start_tsp(matrix);
 

@@ -42,7 +42,8 @@ public:
 
     EdgeMatrix update_edges(EdgeMatrix edges, int vertex) {
         int order = edges.size();
-        for (int i = 0; i < order; i++) {
+
+        for (int i = vertex; i < order; i++) {
             int remaining = 0;
             int used = 0;
             for (int j = 0; j < order; j++) {
@@ -64,7 +65,7 @@ public:
                 }
             } else {
                 for (int j = 0; j < order; j++) {
-                    if (i != j && edges[i][j] == 1) {
+                    if (i != j && edges[i][j] == 0) {
                         edges[i][j] = -1;
                         edges[j][i] = -1;
                     }
