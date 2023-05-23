@@ -4,6 +4,7 @@
 #include "stack.hpp"
 
 #include "containers.hpp"
+#include "c_object.hpp"
 
 using namespace std;
 
@@ -59,6 +60,7 @@ int main()
     std::cout << "Goodbye, tester!\n";
 
     // Create Container
+    printf("Create Container\n");
     Container container;
     bool value = true;
 
@@ -82,6 +84,37 @@ int main()
     }
     printf("threadStatus: %d\n", container.get_thread_status(3));
     container.print_thread_status();
+    printf("--------------------\n");
+
+    // Test CObject
+    printf("Test CObject\n");
+    CObject<bool> cValue;
+    cValue.set(&value);
+    printf("cValue: %d\n", *cValue.get());
+
+    CObject<int> cVerifiedPath;
+    cVerifiedPath.set(&verifiedPath);
+    printf("cVerifiedPath: %d\n", *cVerifiedPath.get());
+
+    CObject<int> cThreadStatus;
+    cThreadStatus.set(threadStatus);
+    printf("cThreadStatus: %d\n", *cThreadStatus.get(3));
+    // print all list in one line
+    for (i = 0; i < 10; i++)
+    {
+        printf("%d ", *cThreadStatus.get(i));
+    }
+    printf("\n");
+
+    int newValue = 100;
+    cThreadStatus.set(&newValue, 6);
+    for (i = 0; i < 10; i++)
+    {
+        printf("%d ", *cThreadStatus.get(i));
+    }
+    printf("\n");
+
+    printf("--------------------\n");
 
     return 0;
 }
