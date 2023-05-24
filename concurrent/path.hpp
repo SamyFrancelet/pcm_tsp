@@ -5,8 +5,21 @@
 #ifndef PATH_HPP
 #define PATH_HPP
 
+/**
+ * The edge matrix is a matrix that represents the state of the edges of a path.
+ * If the edge matrix at position [i][j] is 1, then the edge (i, j) is in the path.
+ * If the edge matrix at position [i][j] is 0, then the edge (i, j) is unused.
+ * If the edge matrix at position [i][j] is -1, then the edge (i, j) is excluded from the path.
+*/
 typedef std::vector<std::vector<int>> EdgeMatrix;
 
+
+/**
+ * The Path class represents a path in the graph.
+ * It contains the edge matrix, the lower bound, the cost, and the status of the path.
+ * The status of the path is either complete or not complete.
+ * A path is complete if all the edges are used.
+*/
 class Path {
 public:
     Path(Matrix *pMatrix, EdgeMatrix edgeMatrix) 
@@ -55,9 +68,6 @@ public:
         std::vector<bool> visited(order, false);
         std::vector<int> used(order, 0);
 
-        bool isCircular = false;
-        int node = -1;
-
         for (int i = 0; i < order; i++) {
             for (int j = 0; j < order; j++) {
                 if (_edgeMatrix[i][j] == 1) {
@@ -72,14 +82,23 @@ public:
             if (used[i] != 2) return false;
         }
 
-        int i = 0;
-        while (!isCircular || (i <= order)) {
-            i++;
-            node = get_next_node(node, 0);
-            if (visited[node]) {
-                isCircular = true;
-            } else {
-                visited[node] = true;
+        int prev = -1;
+        int curr = 0;
+        int next = 0;
+        int count = 0;
+
+        bool isCircular = false;
+
+        while (true) {
+            next = get_next_node(prev, curr);
+            prev = curr;
+            curr = next;
+            count++;
+
+            if (curr == 0) {
+                // Back to start !
+                if (count == order) isCircular = true;
+                break;
             }
         }
 
@@ -104,8 +123,8 @@ public:
     }
 
     void display() {
-        std::cout << "This path includes the following edges: " << std::endl;
         int order = _pMatrix->order();
+        std::cout << "This path includes the following edges: " << std::endl;
         for (int i = 0; i < order; i++) {
             for (int j = i+1; j < order; j++) {
                 if (_edgeMatrix[i][j] == 1) {
@@ -113,19 +132,29 @@ public:
                 }
             }
         }
+
         // Print path starting from 0 and following the edges.
-        int node = 0;
+        int next = 0;
+        int curr = 0;
+        int prev = 0;
 
         std::cout << "[" << _cost << ": " << "0";
         for (int i = 0; i < order; i++) {
-            node = get_next_node(node, i);
-            std::cout << " -> " << node;
+            next = get_next_node(prev, curr);
+            prev = curr;
+            curr = next;
+            std::cout << " -> " << next;
         }
 
         std::cout << "]" << std::endl;
     }
 
 private:
+    /**
+     * Returns the next node in the path.
+     * Next node is the node that is connected to the current node
+     * and is not the previous node.
+    */
     int get_next_node(int prev, int current) {
         int order = _pMatrix->order();
         for (int i = 0; i < order; i++) {
@@ -136,6 +165,12 @@ private:
         return 0;
     }
 
+    /**
+     * Finds the lower bound of the path 
+     * by finding the two smallest edges for each vertex
+     * or counting already used edges.
+     * @return The lower bound of the path.
+    */
     double find_lower_bound() {
         int **inputMatrix = _pMatrix->matrix();
         int order = _pMatrix->order();
@@ -150,13 +185,19 @@ private:
             int positiveEdges = 0;
 
             for (int j = 0; j < order; j++) {
-                if (positiveEdges > 2) break;
+                // If we have found two used at vertex i, then we can break
+                // out of the loop.
+                if (positiveEdges >= 2) break;
 
                 if (_edgeMatrix[i][j] == 1 && !set) {
+                    // If vertex i j is used, then we set the min to the value
+                    // of the edge and set the flag to true.
                     min = inputMatrix[i][j];
                     positiveEdges++;
                     set = true;
                 } else if (_edgeMatrix[i][j] == 1 && set) {
+                    // If we have already set the min, then we set the second
+                    // min to the value of the edge.
                     secondMin = inputMatrix[i][j];
                     positiveEdges++;
                 } else if (inputMatrix[i][j] <= min && inputMatrix[i][j] != 0 && _edgeMatrix[i][j] != -1 && !set) {

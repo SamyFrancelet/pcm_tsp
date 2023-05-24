@@ -40,38 +40,53 @@ public:
         get_child_path(edges);
     }
 
+    /**
+     * Update the edges of the path.
+     * If the vertex already as 2 edges, then every other edge is set to -1.
+     * If the vertex has 1 edge and there is only one edge left, then the
+     * remaining edge is set to 1.
+     * If the vertex has 0 edges, and there is only two edges left, then the
+     * remaining edges are set to 1.
+     * @param edges The edges to update.
+     * @param vertex The vertex to update.
+    */
     EdgeMatrix update_edges(EdgeMatrix edges, int vertex) {
         int order = edges.size();
 
-        for (int i = vertex; i < order; i++) {
-            int remaining = 0;
-            int used = 0;
-            for (int j = 0; j < order; j++) {
-                if (i != j && edges[i][j] == 1) {
-                    used++;
-                } else if (i != j && edges[i][j] == 0) {
-                    remaining++;
+        int edgesUsed = 0;
+        int edgesLeft = 0;
+
+        for (int i = 0; i < order; i++) {
+            if (edges[vertex][i] == 1) {
+                edgesUsed++;
+            } else if (edges[vertex][i] == 0 && i != vertex) {
+                edgesLeft++;
+            }
+        }
+
+        if (edgesUsed == 2) {
+            for (int i = 0; i < order; i++) {
+                if (edges[vertex][i] == 0 && i != vertex) {
+                    edges[vertex][i] = -1;
+                    edges[i][vertex] = -1;
                 }
             }
-
-            if (used < 2) {
-                if ((remaining == 2 && used == 0) || (remaining == 1 && used == 1)) {
-                    for (int j = 0; j < order; j++) {
-                        if (i != j && edges[i][j] == 0) {
-                            edges[i][j] = 1;
-                            edges[j][i] = 1;
-                        }
-                    }
+        } else if (edgesUsed == 1 && edgesLeft == 1) {
+            for (int i = 0; i < order; i++) {
+                if (edges[vertex][i] == 0 && i != vertex) {
+                    edges[vertex][i] = 1;
+                    edges[i][vertex] = 1;
                 }
-            } else {
-                for (int j = 0; j < order; j++) {
-                    if (i != j && edges[i][j] == 0) {
-                        edges[i][j] = -1;
-                        edges[j][i] = -1;
-                    }
+            }
+        } else if (edgesUsed == 0 && edgesLeft == 2) {
+            for (int i = 0; i < order; i++) {
+                if (edges[vertex][i] == 0) {
+                    edges[vertex][i] = 1;
+                    edges[i][vertex] = 1;
                 }
             }
         }
+
         return edges;
     }
 

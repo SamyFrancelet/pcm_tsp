@@ -1,0 +1,22 @@
+@startmindmap
+
+* All
+** AB
+*** AB AC
+**** AB AC /AD /AE
+***** AB AC /AD /AE BC
+****** AB AC /AD /AE BC /BD /BE /CD /CE
+
+***** AB AC /AD /AE /BC
+
+*** AB /AC
+**** AB /AC AD
+***** AB /AC AD /AE
+**** AB /AC /AD
+***** AB /AC /AD AE
+** /AB
+*** /AB AC
+*** /AB /AC
+
+
+@endmindmap
