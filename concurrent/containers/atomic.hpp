@@ -63,6 +63,7 @@ public:
 		u.pair.stamp = stamp;
 		__atomic_store(&ref.val, &u.val, __ATOMIC_RELAXED);
 	}
+
 };
 
 #endif
