@@ -1,3 +1,6 @@
+#ifndef ATOMIC_HPP
+#define ATOMIC_HPP
+
 #include <iostream>
 #include <cstdint>
 
@@ -60,5 +63,7 @@ public:
 		u.pair.stamp = stamp;
 		__atomic_store(&ref.val, &u.val, __ATOMIC_RELAXED);
 	}
-			
+
 };
+
+#endif
