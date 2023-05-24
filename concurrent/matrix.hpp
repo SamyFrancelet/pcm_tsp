@@ -20,8 +20,8 @@ public:
 
     void display() {
         std::cout << "\t";
-        for (char c = '0'; c < '0' + _order; c++) {
-            std::cout << c << "\t";
+        for (int i = 0; i < _order; i++) {
+            std::cout << i << "\t";
         }
         std::cout << std::endl;
 

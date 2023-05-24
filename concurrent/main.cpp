@@ -14,20 +14,12 @@
 std::mutex bestPath;
 std::mutex tsp;
 
-struct Compare {
-    bool operator()(Path &path1, Path &path2) {
-        return path1.lower_bound() > path2.lower_bound();
-    }
-};
-
 std::stack<Path> paths;
-//std::priority_queue<Path, std::vector<Path>, Compare> paths;
 
 void thinking(Path *best, Matrix *pMatrix, bool *keepWaiting, int tid, int *threadStatus)
 {
     while (*keepWaiting) {
         tsp.lock();
-
         if (paths.empty()) {
             threadStatus[tid] = 0; // I'm free !
             // Check if all threads are done
@@ -62,10 +54,7 @@ void thinking(Path *best, Matrix *pMatrix, bool *keepWaiting, int tid, int *thre
             Path leftChildPath(pMatrix, bnb.left());
             Path rightChildPath(pMatrix, bnb.right());
 
-            std::cout << "Best path cost: " << best->cost() << std::endl;
-
             double leftLowerBound = leftChildPath.lower_bound();
-            std::cout << "Left child lower bound: " << leftLowerBound << std::endl;
             tsp.lock();
             if (leftLowerBound <= best->cost()) {
                 // If the left path lower bound is less than the best path cost,
@@ -75,7 +64,6 @@ void thinking(Path *best, Matrix *pMatrix, bool *keepWaiting, int tid, int *thre
             tsp.unlock();
 
             double rightLowerBound = rightChildPath.lower_bound();
-            std::cout << "Right child lower bound: " << rightLowerBound << std::endl;
             tsp.lock();
             if (rightLowerBound <= best->cost()) {
                 // If the right path lower bound is less than the best path cost,
@@ -135,13 +123,28 @@ void start_tsp(Matrix *pMatrix) {
 }
 
 int main(int argc, char* argv[]) {
-    if (argc < 2) {
-        std::cout << "Usage: " << argv[0] << " <tsp file>" << std::endl;
+    Matrix *matrix;
+
+    if (argc == 2) {
+        std::string tspFile(argv[1]);
+        matrix = TSPFile::matrix(tspFile);
+    } else if (argc == 1) {
+        int defaultMatrix[5][5] =  {{0, 3, 4, 2, 7},
+                                    {3, 0, 4, 6, 3},
+                                    {4, 4, 0, 5, 8},
+                                    {2, 6, 5, 0, 6},
+                                    {7, 3, 8, 6, 0}};
+        matrix = new Matrix(5);
+
+        for (int i = 0; i < 5; i++) {
+            for (int j = 0; j < 5; j++) {
+                matrix->sdistance(i, j) = defaultMatrix[i][j];
+            }
+        }
+    } else {
+        std::cout << "Usage: ./tsp <tsp file>" << std::endl;
         return 1;
     }
-
-    std::string tspFile(argv[1]);
-    Matrix *matrix = TSPFile::matrix(tspFile);
 
     std::cout << "Matrix order: " << matrix->order() << std::endl;
     matrix->display();

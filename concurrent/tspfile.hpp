@@ -40,7 +40,8 @@ private:
 	{
 		x0 -= x1;
 		y0 -= y1;
-		return (int) (.5 + sqrt(x0*x0 + y0*y0));
+		//return  (int) std::round(.5 + sqrt(x0*x0 + y0*y0));
+		return  (int) (.5 + sqrt(x0*x0 + y0*y0));
 	}
 
 	static int lldist(double lo0, double la0, double lo1, double la1)

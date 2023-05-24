@@ -91,12 +91,10 @@ public:
     }
 
     int find_cost() {
-        if (!is_route()) return std::numeric_limits<int>::max();
-
         int order = _pMatrix->order();
         int c = 0;
         for (int i = 0; i < order; i++) {
-            for (int j = 0; j < order; j++) {
+            for (int j = i + 1; j < order; j++) {
                 if (_edgeMatrix[i][j] == 1)
                     c += _pMatrix->matrix()[i][j];
             }
@@ -115,7 +113,16 @@ public:
                 }
             }
         }
-        std::cout << "Cost: " << cost() << std::endl;
+        // Print path starting from 0 and following the edges.
+        int node = 0;
+
+        std::cout << "[" << _cost << ": " << "0";
+        for (int i = 0; i < order; i++) {
+            node = get_next_node(node, i);
+            std::cout << " -> " << node;
+        }
+
+        std::cout << "]" << std::endl;
     }
 
 private:
@@ -152,12 +159,12 @@ private:
                 } else if (_edgeMatrix[i][j] == 1 && set) {
                     secondMin = inputMatrix[i][j];
                     positiveEdges++;
-                } else if (inputMatrix[i][j] <= min && inputMatrix[i][j] != 0 && _edgeMatrix[i][j] == -1 && !set) {
+                } else if (inputMatrix[i][j] <= min && inputMatrix[i][j] != 0 && _edgeMatrix[i][j] != -1 && !set) {
                     if (min < secondMin) {
                         secondMin = min;
                     }
                     min = inputMatrix[i][j];
-                } else if (inputMatrix[i][j] <= min && inputMatrix[i][j] != 0 && _edgeMatrix[i][j] == -1) {
+                } else if (inputMatrix[i][j] < secondMin && inputMatrix[i][j] != 0 && _edgeMatrix[i][j] != -1) {
                     secondMin = inputMatrix[i][j];
                 }
             }
