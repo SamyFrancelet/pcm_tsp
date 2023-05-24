@@ -53,18 +53,18 @@ static void branch_and_bound(Path* current)
         // this is a leaf
         current->add(0);
         if (global.verbose & VER_COUNTERS)
-            container.setVerifiedPath(new int(container.getVerifiedPath() + 1));
-        if (current->distance() < container.getPath().distance()) {
+            container.set_verified_path(new int(container.get_verified_path() + 1));
+        if (current->distance() < container.get_path().distance()) {
             if (global.verbose & VER_SHORTER)
                 std::cout << "shorter: " << current << '\n';
-            container.setPath(current);
+            container.set_path(current);
             if (global.verbose & VER_COUNTERS)
-                container.setVerifiedPath(new int(container.getVerifiedPath() + 1));
+                container.set_verified_path(new int(container.get_verified_path() + 1));
         }
         current->pop();
     } else {
         // not yet a leaf
-        if (current->distance() < container.getPath().distance()) {
+        if (current->distance() < container.get_path().distance()) {
             // continue branching
             for (int i=1; i<current->max(); i++) {
                 if (!current->contains(i)) {
@@ -87,8 +87,8 @@ static void branch_and_bound(Path* current)
 void reset_counters(int size)
 {
     global.size = size;
-    container.setVerifiedPath(new int(0));
-    container.setPath(new Path(nullptr));
+    container.set_verified_path(new int(0));
+    container.set_path(new Path(nullptr));
     for (int i=0; i<global.size; i++) {
         global.counter.bound[i] = 0;
         if (i) {
@@ -102,8 +102,8 @@ void reset_counters(int size)
 void print_counters()
 {
     std::cout << "total: " << global.total << '\n';
-    std::cout << "verified: " << container.getVerifiedPath() << '\n';
-    std::cout << "found shorter: " << container.getVerifiedPath() << '\n';
+    std::cout << "verified: " << container.get_verified_path() << '\n';
+    std::cout << "found shorter: " << container.get_verified_path() << '\n';
     std::cout << "bound (per level):";
     for (int i=0; i<global.size; i++)
         std::cout << ' ' << global.counter.bound[i];
@@ -115,7 +115,7 @@ void print_counters()
         equiv += e;
     }
     std::cout << "\nbound equivalent (total): " << equiv << '\n';
-    std::cout << "check: total " << (global.total==(container.getVerifiedPath() + equiv) ? "==" : "!=") << " verified + total bound equivalent\n";
+    std::cout << "check: total " << (global.total==(container.get_verified_path() + equiv) ? "==" : "!=") << " verified + total bound equivalent\n";
 }
 
 int main(int argc, char* argv[])
@@ -144,11 +144,11 @@ int main(int argc, char* argv[])
     if (global.verbose & VER_COUNTERS)
         reset_counters(g->size());
 
-    container.setPath(new Path(g));
+    container.set_path(new Path(g));
     for (int i=0; i<g->size(); i++) {
-        container.getPath().add(i);
+        container.get_path().add(i);
     }
-    container.getPath().add(0);
+    container.get_path().add(0);
 
     begin = std::chrono::steady_clock::now();
     Path* current = new Path(g);
@@ -156,7 +156,7 @@ int main(int argc, char* argv[])
     branch_and_bound(current);
     end = std::chrono::steady_clock::now();
 
-    container.printPath();
+    container.print_path();
 
     if (global.verbose & VER_COUNTERS)
         print_counters();

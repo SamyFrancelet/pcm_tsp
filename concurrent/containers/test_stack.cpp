@@ -96,23 +96,17 @@ int main()
     cVerifiedPath.set(&verifiedPath);
     printf("cVerifiedPath: %d\n", *cVerifiedPath.get());
 
-    CObject<int> cThreadStatus;
-    cThreadStatus.set(threadStatus);
-    printf("cThreadStatus: %d\n", *cThreadStatus.get(3));
-    // print all list in one line
+    //Create table of CObject<int>
+    CObject<int> *cThreadStatusTable = new CObject<int>[10];
     for (i = 0; i < 10; i++)
     {
-        printf("%d ", *cThreadStatus.get(i));
+        cThreadStatusTable[i].set(&status[i]);
     }
-    printf("\n");
-
-    int newValue = 100;
-    cThreadStatus.set(&newValue, 6);
+    printf("cThreadStatusTable: %d\n", *cThreadStatusTable[3].get());
     for (i = 0; i < 10; i++)
     {
-        printf("%d ", *cThreadStatus.get(i));
+        printf("cThreadStatusTable[%d]: %d\n", i, *cThreadStatusTable[i].get());
     }
-    printf("\n");
 
     printf("--------------------\n");
 
