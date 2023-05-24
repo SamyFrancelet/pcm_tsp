@@ -5,6 +5,7 @@
 //
 
 #include <iostream>
+#include "graph.hpp"
 
 #ifndef _path_hpp
 #define _path_hpp
@@ -68,6 +69,11 @@ public:
 			if (_nodes[i] == node)
 				return true;
 		return false;
+	}
+
+	int at(int i) const 
+	{
+		 return _nodes[i]; 
 	}
 
 	void copy(Path* o)
