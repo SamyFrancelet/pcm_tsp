@@ -6,9 +6,9 @@ LDFLAGS=-O3 -lm
 all: tspcc tspmt
 
 tspmt: concurrent/main.o
-	c++ -o tspmt $(LDFLAGS) concurrent/main.o
+	c++ -o tspmt $(LDFLAGS) concurrent/main.o -latomic
 
-main.o: concurrent/main.cpp concurrent/matrix.hpp concurrent/tspfile.hpp concurrent/path.hpp concurrent/bnb.hpp
+main.o: concurrent/main.cpp concurrent/matrix.hpp concurrent/tspfile.hpp concurrent/path.hpp concurrent/bnb.hpp concurrent/containers/stack.hpp concurrent/containers/atomic.hpp
 	c++ $(CFLAGS) -c concurrent/main.cpp
 
 tspcc: sequential/tspcc.o
