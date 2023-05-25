@@ -120,10 +120,12 @@ void start_tsp(Matrix *pMatrix, int nThreads) {
     }
     end = std::chrono::steady_clock::now();
 
-    std::cout << "Best path: ";
-    bestPath.display();
-    std::cout << "Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
-    std::cout << (paths.empty() ? "Empty" : "NOT EMPTY ????????") << std::endl;
+    //std::cout << "Best path: ";
+    //bestPath.display();
+    //std::cout << "Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
+    //std::cout << (paths.empty() ? "Empty" : "NOT EMPTY ????????") << std::endl;
+    std::chrono::duration<double>elapsedSeconds = end - start;
+    std::cout<<nThreads<<";"<<";"<<elapsedSeconds.count()<<std::endl;
 }
 
 int main(int argc, char* argv[]) {
