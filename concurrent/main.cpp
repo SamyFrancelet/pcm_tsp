@@ -2,6 +2,7 @@
 #include <chrono>
 #include <thread>
 #include <mutex>
+#include <atomic>
 
 #include <stack>
 #include <queue>
@@ -10,14 +11,21 @@
 #include "tspfile.hpp"
 #include "path.hpp"
 #include "bnb.hpp"
+#include "containers/stack.hpp"
 
-std::mutex myMutex;
+ConcurrentStack<Path*> paths;
+std::atomic<bool> keepRunning(true);
+std::atomic<int> *threadStatus = new std::atomic<int>[300];
+std::atomic<Path*> best;
 
-void solve(Matrix *pMatrix, Path *best, std::stack<Path> *paths, bool *keepRunning, int tid, int *threadStatus)
+void solve(Matrix *pMatrix, int tid)
 {
-    while (*keepRunning) {
-        myMutex.lock();
-        if (paths->empty()) {
+    Path * path = nullptr;
+    while (keepRunning.load()) {
+
+        path = paths.pop();
+
+        if (path == nullptr) {
             threadStatus[tid] = 0; // I'm free!
 
             int status = 0;
@@ -26,51 +34,48 @@ void solve(Matrix *pMatrix, Path *best, std::stack<Path> *paths, bool *keepRunni
             }
 
             if (status == 0) {
-                *keepRunning = false;
+                keepRunning = false;
             }
-            myMutex.unlock();
             continue;
         }
 
         threadStatus[tid] = 1; // I'm enslaved...
-        Path path = paths->top();
-        paths->pop();
-        myMutex.unlock();
 
-        if (path.valid() && path.complete()) {
-            myMutex.lock();
-            if (path.cost() <= best->cost()) {
-                *best = path;
+        if (path->valid() && path->complete()) {
+            if (path->cost() <= best.load()->cost()) {
+                best = path;
+                continue;
             }
-            myMutex.unlock();
         }
 
-        if (path.valid() && !path.complete()) {
-            BnB bnb(path.edge_matrix());
-            Path left(pMatrix, bnb.left());
-            Path right(pMatrix, bnb.right());
+        if (path->valid() && !path->complete()) {
+            BnB bnb(path->edge_matrix());
+            Path *left = new Path(pMatrix, bnb.left());
+            Path *right = new Path(pMatrix, bnb.right());
 
-            myMutex.lock();
-            if (left.lower_bound() <= best->cost()) {
-                paths->push(left);
+            if (left->lower_bound() <= best.load()->cost()) {
+                paths.push(left);
+            } else {
+                delete left;
             }
-            myMutex.unlock();
 
-            myMutex.lock();
-            if (right.lower_bound() <= best->cost()) {
-                paths->push(right);
+            if (right->lower_bound() <= best.load()->cost()) {
+                paths.push(right);
+            } else {
+                delete right;
             }
-            myMutex.unlock();
         }
+
+        delete path;
+        path = nullptr;
     }
 }
 
 void start_tsp(Matrix *pMatrix, int nThreads) {
-    std::stack<Path> paths;
     std::chrono::steady_clock::time_point start, end;
 
     EdgeMatrix rootEdges(pMatrix->order(), std::vector<int>(pMatrix->order(), 0));
-    Path root(pMatrix, rootEdges);
+    Path *root = new Path(pMatrix, rootEdges);
     paths.push(root);
 
     // Generate initial path
@@ -99,20 +104,19 @@ void start_tsp(Matrix *pMatrix, int nThreads) {
         }
     }
 
-    Path bestPath(pMatrix, edgeMatrix);
+    best = new Path(pMatrix, edgeMatrix);
 
     std::thread threads[nThreads];
-    int threadStatus[300];
     for (int i = 0; i < 300; i++) {
         // 1 = running, 0 = stopped
         threadStatus[i] = i < nThreads ? 1 : 0;
     }
 
-    bool keepRunning = true;
+    keepRunning = true;
 
     start = std::chrono::steady_clock::now();
     for (int i = 0; i < nThreads; i++) {
-        threads[i] = std::thread(solve, pMatrix, &bestPath, &paths, &keepRunning, i, threadStatus);
+        threads[i] = std::thread(solve, pMatrix, i);
     }
 
     for (int i = 0; i < nThreads; i++) {
@@ -121,11 +125,11 @@ void start_tsp(Matrix *pMatrix, int nThreads) {
     end = std::chrono::steady_clock::now();
 
     //std::cout << "Best path: ";
-    //bestPath.display();
+    best.load()->display();
     //std::cout << "Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
     //std::cout << (paths.empty() ? "Empty" : "NOT EMPTY ????????") << std::endl;
     std::chrono::duration<double>elapsedSeconds = end - start;
-    std::cout<<nThreads<<";"<<";"<<elapsedSeconds.count()<<std::endl;
+    std::cout<<nThreads<<";"<<elapsedSeconds.count()<<std::endl;
 }
 
 int main(int argc, char* argv[]) {
