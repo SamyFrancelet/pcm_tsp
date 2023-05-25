@@ -8,7 +8,7 @@ mkdir results/ || touch results/result.txt
 echo "" > ./results/result.txt
 echo "The tests are executed on the file ./text_data/lau15.tsp with 15 cities."
 echo "Launching the tests !"
-for i in {1..255..10}
+for i in {1..255..1}
 do
   echo "Test with " $i " threads"
   ./tspmt ./test_data/lau15.tsp $i >> ./results/result.txt
