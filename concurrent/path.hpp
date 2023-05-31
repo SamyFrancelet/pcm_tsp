@@ -22,216 +22,306 @@ typedef std::vector<std::vector<int>> EdgeMatrix;
 */
 class Path {
 public:
-    Path(Matrix *pMatrix, EdgeMatrix edgeMatrix) 
-        : _pMatrix(pMatrix), _edgeMatrix(edgeMatrix) 
+    Path(Matrix *matrix, EdgeMatrix edgeMatrix)
+        : _pMatrix(matrix), _edgeMatrix(edgeMatrix)
     {
-        _lowerBound = find_lower_bound();
-        _isComplete = check_is_complete();
-        _isRoute = check_is_route();
-        if (_isRoute) {
-            _cost = find_cost();
+        _valid = is_valid();
+        if (_valid) {
+            _lowerBound = get_lower_bound();
+            _complete = is_complete();
+            if (_complete) {
+                _cost = get_cost();
+            } else {
+                _cost = std::numeric_limits<int>::max();
+            }
         } else {
-            _cost = std::numeric_limits<int>::max();
+            _lowerBound = std::numeric_limits<int>::max();
         }
     }
 
-    EdgeMatrix edge_matrix() {
-        return _edgeMatrix;
+    bool valid() const { return _valid; }
+    int lower_bound() const { return _lowerBound; }
+    int cost() const { return _cost; }
+    bool complete() const { return _complete; }
+
+    EdgeMatrix edge_matrix() const { return _edgeMatrix; }
+
+    void display() {
+        /*std::cout << "Edge matrix:" << std::endl;
+        for (int i = 0; i < _pMatrix->order(); i++) {
+            for (int j = 0; j < _pMatrix->order(); j++) {
+                std::cout << _edgeMatrix[i][j] << "\t";
+            }
+            std::cout << std::endl;
+        }
+        std::cout << "Valid: " << (_valid ? "Yes" : "No") << std::endl;
+        std::cout << "Lower bound: " << _lowerBound << std::endl;
+        std::cout << "Complete: " << (_complete ? "Yes" : "No") << std::endl;
+        std::cout << "Cost: " << _cost << std::endl;*/
+
+
+        if (_valid && _complete) {
+            int prev = 0;
+            int curr = 0;
+            int next = 0;
+
+            //std::cout << "This path is:" << std::endl;
+            std::cout << "[" << _cost << ": " << curr;
+            for (int i = 0; i < _pMatrix->order(); i++) {
+                next = get_next_node(prev, curr);
+                prev = curr;
+                curr = next;
+                std::cout << " -> " << curr;
+            }
+            std::cout << "]" << std::endl;
+        }
     }
 
-    double lower_bound() {
-        return _lowerBound;
-    }
 
-    bool complete() {
-        return _isComplete;
-    }
-
-    bool check_is_complete() {
+private:
+    /**
+     * Check if the edge matrix is valid.
+     * The edge matrix is valid if it contains only 0, 1, and -1.
+     * and if there is maximum 2 1s per row and per column.
+     * @return true if the edge matrix is valid, false otherwise.
+    */
+    bool is_valid()
+    {
         int order = _pMatrix->order();
+
+        // Check if the edge matrix contains only 0, 1, and -1.
         for (int i = 0; i < order; i++) {
             for (int j = 0; j < order; j++) {
-                if (i == j) continue;
-                if (_edgeMatrix[i][j] == 0) return false;
+                if (_edgeMatrix[i][j] != 0 && _edgeMatrix[i][j] != 1 && _edgeMatrix[i][j] != -1) {
+                    return false;
+                }
             }
+        }
+
+        // Check if there is maximum 2 1s per row.
+        for (int i = 0; i < order; i++) {
+            int count = 0;
+            for (int j = 0; j < order; j++) {
+                if (_edgeMatrix[i][j] == 1) {
+                    count++;
+                }
+            }
+            if (count > 2) {
+                return false;
+            }
+        }
+
+        // Check if there is maximum 2 1s per column.
+        for (int j = 0; j < order; j++) {
+            int count = 0;
+            for (int i = 0; i < order; i++) {
+                if (_edgeMatrix[i][j] == 1) {
+                    count++;
+                }
+            }
+            if (count > 2) {
+                return false;
+            }
+        }
+
+        // Check if there is at least 2 1s or 0s per row.
+        for (int i = 0; i < order; i++) {
+            int count = 0;
+            for (int j = 0; j < order; j++) {
+                if (_edgeMatrix[i][j] == 1 || (_edgeMatrix[i][j] == 0 && i != j)) {
+                    count++;
+                }
+            }
+            if (count < 2) {
+                return false;
+            }
+        }
+
+        // Check if there is at least 2 1s or 0s per column.
+        for (int j = 0; j < order; j++) {
+            int count = 0;
+            for (int i = 0; i < order; i++) {
+                if (_edgeMatrix[i][j] == 1 || (_edgeMatrix[i][j] == 0 && i != j)) {
+                    count++;
+                }
+            }
+            if (count < 2) {
+                return false;
+            }
+        }
+
+        // Check that there is no unwanted cycle.
+        int prev = 0;
+        int curr = 0;
+        int next = 0;
+        _nNodes = 0;
+        
+        while (true) {
+            next = get_next_node(prev, curr);
+            _nNodes++;
+            if (next == -1 || next == 0) {
+                break;
+            }
+            prev = curr;
+            curr = next;
+        }
+
+        if (next == 0 && _nNodes != order) {
+            return false;
         }
 
         return true;
     }
 
-    bool is_route() {
-        return _isRoute;
-    }
-
-    bool check_is_route() {
-        int order = _pMatrix->order();
-        std::vector<bool> visited(order, false);
-        std::vector<int> used(order, 0);
-
-        for (int i = 0; i < order; i++) {
-            for (int j = 0; j < order; j++) {
-                if (_edgeMatrix[i][j] == 1) {
-                    used[i] += 1;
-                }
-            }
-        }
-
-        for (int i = 0; i < order; i++) {
-            // If we didn't go in and out of the same vertex, then the graph
-            // is not a route.
-            if (used[i] != 2) return false;
-        }
-
-        int prev = -1;
-        int curr = 0;
-        int next = 0;
-        int count = 0;
-
-        bool isCircular = false;
-
-        while (true) {
-            next = get_next_node(prev, curr);
-            prev = curr;
-            curr = next;
-            count++;
-
-            if (curr == 0) {
-                // Back to start !
-                if (count == order) isCircular = true;
-                break;
-            }
-        }
-
-        return isCircular;
-    }
-
-    int cost() {
-        return _cost;
-    }
-
-    int find_cost() {
-        int order = _pMatrix->order();
-        int c = 0;
-        for (int i = 0; i < order; i++) {
-            for (int j = i + 1; j < order; j++) {
-                if (_edgeMatrix[i][j] == 1)
-                    c += _pMatrix->matrix()[i][j];
-            }
-        }
-
-        return c;
-    }
-
-    void display() {
-        int order = _pMatrix->order();
-        std::cout << "This path includes the following edges: " << std::endl;
-        for (int i = 0; i < order; i++) {
-            for (int j = i+1; j < order; j++) {
-                if (_edgeMatrix[i][j] == 1) {
-                    std::cout << i << " <-> " << j << std::endl;
-                }
-            }
-        }
-
-        // Print path starting from 0 and following the edges.
-        int next = 0;
-        int curr = 0;
-        int prev = 0;
-
-        std::cout << "[" << _cost << ": " << "0";
-        for (int i = 0; i < order; i++) {
-            next = get_next_node(prev, curr);
-            prev = curr;
-            curr = next;
-            std::cout << " -> " << next;
-        }
-
-        std::cout << "]" << std::endl;
-    }
-
-private:
     /**
-     * Returns the next node in the path.
-     * Next node is the node that is connected to the current node
-     * and is not the previous node.
+     * Compute the lower bound cost of the path.
+     * The lower bound cost of the path is the sum of the weights of the edges
+     * that are used in the path, plus the sum of the minimum weights of the edges
+     * that are not used in the path.
+     * @return the lower bound cost of the path.
     */
-    int get_next_node(int prev, int current) {
+    int get_lower_bound()
+    {
         int order = _pMatrix->order();
-        for (int i = 0; i < order; i++) {
-            if (_edgeMatrix[current][i] == 1 && i != prev) {
-                return i;
-            }
-        }
-        return 0;
-    }
+        int lowerBound = 0;
 
-    /**
-     * Finds the lower bound of the path 
-     * by finding the two smallest edges for each vertex
-     * or counting already used edges.
-     * @return The lower bound of the path.
-    */
-    double find_lower_bound() {
-        int **inputMatrix = _pMatrix->matrix();
-        int order = _pMatrix->order();
+        int** inMatrix = _pMatrix->matrix();
 
         int min = std::numeric_limits<int>::max();
-        int secondMin = std::numeric_limits<int>::max();
+        int min2 = std::numeric_limits<int>::max();
 
-        int total = 0;
         bool set = false;
 
+        // Compute the sum of the minimum weights of the edges that are not used in the path.
         for (int i = 0; i < order; i++) {
             int positiveEdges = 0;
 
             for (int j = 0; j < order; j++) {
-                // If we have found two used at vertex i, then we can break
-                // out of the loop.
-                if (positiveEdges >= 2) break;
+                if (positiveEdges == 2) {
+                    break;
+                }
 
                 if (_edgeMatrix[i][j] == 1 && !set) {
-                    // If vertex i j is used, then we set the min to the value
-                    // of the edge and set the flag to true.
-                    min = inputMatrix[i][j];
                     positiveEdges++;
                     set = true;
+                    min = inMatrix[i][j];
                 } else if (_edgeMatrix[i][j] == 1 && set) {
-                    // If we have already set the min, then we set the second
-                    // min to the value of the edge.
-                    secondMin = inputMatrix[i][j];
                     positiveEdges++;
-                } else if (inputMatrix[i][j] <= min && inputMatrix[i][j] != 0 && _edgeMatrix[i][j] != -1 && !set) {
-                    if (min < secondMin) {
-                        secondMin = min;
+                    min2 = inMatrix[i][j];
+                } else if (inMatrix[i][j] <= min && inMatrix[i][j] != 0 && _edgeMatrix[i][j] != -1 && !set) {
+                    if (min < min2) {
+                        min2 = min;
                     }
-                    min = inputMatrix[i][j];
-                } else if (inputMatrix[i][j] < secondMin && inputMatrix[i][j] != 0 && _edgeMatrix[i][j] != -1) {
-                    secondMin = inputMatrix[i][j];
+                    min = inMatrix[i][j];
+                } else if (inMatrix[i][j] < min2 && inMatrix[i][j] != 0 && _edgeMatrix[i][j] != -1) {
+                    min2 = inMatrix[i][j];
                 }
             }
 
             set = false;
 
-            // If we have not found two used at vertex i, then the graph is not
-            // complete and we can return 0.0.
-            if (min == std::numeric_limits<int>::max() || secondMin == std::numeric_limits<int>::max())
+            if (min == std::numeric_limits<int>::max() && min2 == std::numeric_limits<int>::max()) {
                 return 0;
+            }
 
-            total += min + secondMin;
+            lowerBound += min + min2;
             min = std::numeric_limits<int>::max();
-            secondMin = std::numeric_limits<int>::max();
+            min2 = std::numeric_limits<int>::max();
         }
 
-        return total / 2.0;
+        lowerBound /= 2;
+
+        return lowerBound;
+    }
+
+    /**
+     * Compute the cost of the path.
+     * The cost of the path is the sum of the weights of the edges.
+     * @return the cost of the path.
+    */
+    int get_cost()
+    {
+        int order = _pMatrix->order();
+        int cost = 0;
+
+        for (int i = 0; i < order; i++) {
+            for (int j = i+1; j < order; j++) {
+                if (_edgeMatrix[i][j] == 1) {
+                    cost += _pMatrix->matrix()[i][j];
+                }
+            }
+        }
+
+        return cost;
+    }
+
+    /**
+     * Check if the path is complete.
+     * A path is complete if all the edges are used
+     * and the path is circular (the last node is connected to the first node).
+    */
+    bool is_complete()
+    {
+        int order = _pMatrix->order();
+
+        // Check if all the edges are used.
+        for (int i = 0; i < order; i++) {
+            for (int j = 0; j < order; j++) {
+                if (_edgeMatrix[i][j] == 0 && i != j) {
+                    return false;
+                }
+            }
+        }
+
+        // Check if the path is circular.
+        int prev = -1;
+        int node = 0;
+        int next = 0;
+        int count = 0;
+        bool circular = false;
+
+        while (count < order) {
+            next = get_next_node(prev, node);
+            if (next == -1) {
+                return false;
+            }
+            prev = node;
+            node = next;
+            count++;
+            if (node == 0 && count == order) {
+                circular = true;
+                break;
+            }
+        }
+
+        return circular;
+    }
+
+    /**
+     * Get the next node of the path.
+     * @param prev The previous node.
+     * @param node The current node.
+     * @return The next node or -1 if there is no next node.
+    */
+    int get_next_node(int prev, int node)
+    {
+        int order = _pMatrix->order();
+        for (int i = 0; i < order; i++) {
+            if (_edgeMatrix[node][i] == 1 && i != prev) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     Matrix *_pMatrix;
     EdgeMatrix _edgeMatrix;
 
-    double _lowerBound;
-    bool _isComplete;
-    bool _isRoute;
+    bool _valid;
+    int _lowerBound;
     int _cost;
+    bool _complete;
+    int _nNodes;
 };
 
 #endif // PATH_HPP

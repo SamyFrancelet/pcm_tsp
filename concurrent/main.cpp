@@ -2,6 +2,8 @@
 #include <chrono>
 #include <thread>
 #include <mutex>
+#include <atomic>
+#include <cstdint>
 
 #include <stack>
 #include <queue>
@@ -10,120 +12,140 @@
 #include "tspfile.hpp"
 #include "path.hpp"
 #include "bnb.hpp"
+#include "containers/stack.hpp"
+#include "containers/c_object.hpp"
 
-std::mutex bestPath;
-std::mutex tsp;
+// Create a struct containing a bool and a table of 300 ints
+struct Status {
+    bool keepRunning;
+    int threadStatus[300];
+};
 
-std::stack<Path> paths;
+ConcurrentStack<Path*> paths;
+CObject<Status> runningStatus;
 
-void thinking(Path *best, Matrix *pMatrix, bool *keepWaiting, int tid, int *threadStatus)
+CObject<Path> best;
+
+void solve(Matrix *pMatrix, int tid)
 {
-    while (*keepWaiting) {
-        tsp.lock();
-        if (paths.empty()) {
-            threadStatus[tid] = 0; // I'm free !
-            // Check if all threads are done
+    Path * path = nullptr;
+    while (runningStatus.get()->keepRunning) {
+
+        path = paths.pop();
+
+        if (path == nullptr) {
+            runningStatus.get()->threadStatus[tid] = 0; // I'm free!
+
             int status = 0;
-            for (int i = 0; i < sizeof(threadStatus); i++) {
-                status += threadStatus[i];
+            for (int i = 0; i < 300; i++) {
+                status += runningStatus.get()->threadStatus[i];
             }
 
             if (status == 0) {
-                *keepWaiting = false;
+                runningStatus.get()->keepRunning = false;
             }
-            tsp.unlock();
             continue;
         }
+        runningStatus.get()->threadStatus[tid] = 1; // I'm enslaved...
 
-        threadStatus[tid] = 1; // I'm working hard here !
-        Path path = paths.top();
-        paths.pop();
-
-        tsp.unlock();
-
-        if (path.is_route()) {
-            if (path.cost() <= best->cost()) {
-                bestPath.lock();
-                *best = path;
-                bestPath.unlock();
+        if (path->valid() && path->complete()) {
+            if (path->cost() <= best.get()->cost()) {
+                best.set(path);
+                continue;
             }
         }
 
-        if (!path.complete()) {
-            BnB bnb(path.edge_matrix());
-            Path leftChildPath(pMatrix, bnb.left());
-            Path rightChildPath(pMatrix, bnb.right());
+        if (path->valid() && !path->complete()) {
+            BnB bnb(path->edge_matrix());
+            Path *left = new Path(pMatrix, bnb.left());
+            Path *right = new Path(pMatrix, bnb.right());
 
-            double leftLowerBound = leftChildPath.lower_bound();
-            tsp.lock();
-            if (leftLowerBound <= best->cost()) {
-                // If the left path lower bound is less than the best path cost,
-                // then the left path is a candidate for the best path.
-                paths.push(leftChildPath);
+            if (left->lower_bound() <= best.get()->cost()) {
+                paths.push(left);
+            } else {
+                delete left;
             }
-            tsp.unlock();
 
-            double rightLowerBound = rightChildPath.lower_bound();
-            tsp.lock();
-            if (rightLowerBound <= best->cost()) {
-                // If the right path lower bound is less than the best path cost,
-                // then the right path is a candidate for the best path.
-                paths.push(rightChildPath);
+            if (right->lower_bound() <= best.get()->cost()) {
+                paths.push(right);
+            } else {
+                delete right;
             }
-            tsp.unlock();
         }
+
+        delete path;
+        path = nullptr;
     }
 }
 
-void start_tsp(Matrix *pMatrix) {
-    std::chrono::steady_clock::time_point begin, end;
+void start_tsp(Matrix *pMatrix, int nThreads) {
+    std::chrono::steady_clock::time_point start, end;
 
-    int order = pMatrix->order();
-    EdgeMatrix edges(order, std::vector<int>(order, 0));
+    EdgeMatrix rootEdges(pMatrix->order(), std::vector<int>(pMatrix->order(), 0));
+    Path *root = new Path(pMatrix, rootEdges);
+    paths.push(root);
 
-    Path best(pMatrix, edges);
-    paths.push(best);
-    std::cout << "Initial best path: " << std::endl;
-    best.display();
+    // Generate initial path
+    EdgeMatrix edgeMatrix(pMatrix->order(), std::vector<int>(pMatrix->order(), -1));
 
-    unsigned int nCores = std::thread::hardware_concurrency();
-    unsigned int nThreads;
+    // Generate initial path 0 -> 1 -> 2 -> ... -> n -> 0
+    // EdgeMatrix will look like this:
+    //      0    1    2    3    4
+    // 0    0    1    -1   -1   1
+    // 1    1    0    1    -1   -1
+    // 2    -1   1    0    1    -1
+    // 3    -1   -1   1    0    1
+    // 4    1    -1   -1   1    0
 
-    std::cout << "Number of possible threads: " << nCores << std::endl;
-    std::cout << "Please enter the number of threads to use: ";
-    std::cin >> nThreads;
-
-    if (nThreads > nCores) {
-        std::cout << "Number of threads requested is greater than the number of cores available. Using "
-                  << nCores << " threads." << std::endl;
-        nThreads = nCores;
+    for (int i = 0; i < pMatrix->order(); i++) {
+        for (int j = 0; j < pMatrix->order(); j++) {
+            if (i == j) {
+                edgeMatrix[i][j] = 0;
+            } else if (i == j+1 || i+1 == j) {
+                edgeMatrix[i][j] = 1;
+            } else if ((i == 0 && j == pMatrix->order()-1) || (i == pMatrix->order()-1 && j == 0)) {
+                edgeMatrix[i][j] = 1;
+            } else {
+                edgeMatrix[i][j] = -1;
+            }
+        }
     }
 
+    Path *path = new Path(pMatrix, edgeMatrix);
+    best.set(path);
     std::thread threads[nThreads];
-    int threadStatus[1000];
-    for (int i = 0; i < 1000; i++) {
-        threadStatus[i] = i < nThreads ? 1 : 0; // 1 = running, 0 = no more work
+    for (int i = 0; i < 300; i++) {
+        // 1 = running, 0 = stopped
+        runningStatus.get()->threadStatus[i] = i < nThreads ? 1 : 0;
     }
-
-    bool keepWaiting = true;
-
-    begin = std::chrono::steady_clock::now();
+    runningStatus.get()->keepRunning = true;
+    start = std::chrono::steady_clock::now();
     for (int i = 0; i < nThreads; i++) {
-        threads[i] = std::thread(thinking, &best, pMatrix, &keepWaiting, i, threadStatus);
+        threads[i] = std::thread(solve, pMatrix, i);
     }
-
     for (int i = 0; i < nThreads; i++) {
         threads[i].join();
     }
     end = std::chrono::steady_clock::now();
 
-    std::chrono::duration<double> elapsedSeconds = end - begin;
-    best.display();
-    std::cout << "Elapsed time: " << elapsedSeconds.count() << " seconds" << std::endl;
+    //std::cout << "Best path: ";
+    best.get()->display();
+    //std::cout << "Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
+    //std::cout << (paths.empty() ? "Empty" : "NOT EMPTY ????????") << std::endl;
+    std::chrono::duration<double>elapsedSeconds = end - start;
+    std::cout<<nThreads<<";"<<elapsedSeconds.count()<<std::endl;
 }
 
 int main(int argc, char* argv[]) {
     Matrix *matrix;
+    int nThreads = 1;
+    // Create and set status
+    Status* statusTemp = new Status();
+    statusTemp->keepRunning = true;
+    for (int i = 0; i < 300; i++) {
+        statusTemp->threadStatus[i] = 0;
+    }
+    runningStatus.set(statusTemp);
 
     if (argc == 2) {
         std::string tspFile(argv[1]);
@@ -141,14 +163,18 @@ int main(int argc, char* argv[]) {
                 matrix->sdistance(i, j) = defaultMatrix[i][j];
             }
         }
+    } else if (argc == 3) {
+        std::string tspFile(argv[1]);
+        matrix = TSPFile::matrix(tspFile);
+        nThreads = std::stoi(argv[2]);
     } else {
-        std::cout << "Usage: ./tsp <tsp file>" << std::endl;
+        std::cout << "Usage: " << argv[0] << " <tsp file> <n threads=1>" << std::endl;
         return 1;
     }
 
-    std::cout << "Matrix order: " << matrix->order() << std::endl;
-    matrix->display();
-    start_tsp(matrix);
+    //std::cout << "Matrix order: " << matrix->order() << std::endl;
+    //matrix->display();
+    start_tsp(matrix, nThreads);
 
     return 0;
 }

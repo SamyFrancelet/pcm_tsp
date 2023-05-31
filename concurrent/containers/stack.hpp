@@ -47,14 +47,16 @@ public:
             if (current_top == nullptr)
             {
                 //printf("Stack is empty\n");
-                continue;
+                return nullptr;
+                //continue;
             }
             Node* new_top = current_top->next;
-            T value = current_top->value;
+            //T value = current_top->value;
             if (top.cas(current_top, new_top, stamp, stamp + 1))
             {
+                auto data = current_top->value;
                 delete current_top;
-                return value;
+                return data;
             }
         }
     }
